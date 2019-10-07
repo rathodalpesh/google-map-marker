@@ -1,0 +1,64 @@
+ public function propertyLocations(){
+        // Start : Get Rent Applicant postcode and find lat lng
+        $postcodeArray = $totalPostCode = [];
+        $rentalApplicantObj = RentalApplicant::select('id','preffered_location')->where('status','!=','deleted')->WhereNotNull('preffered_location')->get();
+
+        if( $rentalApplicantObj ){
+
+            foreach ($rentalApplicantObj as $applicant_key => $applicant_value) {
+
+                $explodedPostCode = explode(',', $applicant_value->preffered_location);
+                foreach ($explodedPostCode as $key => $value) {
+                   $postcodeArray[] = $value;
+                }
+            }
+        }
+
+        $totalPostCode = array_count_values($postcodeArray);
+
+        $getRentalApplicants = PostCodeLatLngs::get();
+
+        $dimension = array();
+        $cricle_count_maker = array();
+        if(count($getRentalApplicants) > 0){
+            foreach ($getRentalApplicants as $key => $value) {
+
+                $totalApplicant = 0;
+                if (in_array( $value->post_code , $postcodeArray)){
+
+                   $totalApplicant = $totalPostCode[$value->post_code];   
+                }
+
+                $dimension[$key]['center']['lat'] = (float)$value->latitude;
+                $dimension[$key]['center']['lng']= (float)$value->longitude;
+
+                $cricle_count_maker[$key][0] = "PostCode: ".$value->post_code." Total Applicant: ".$totalApplicant;
+                $cricle_count_maker[$key][1] = (float)$value->latitude;
+                $cricle_count_maker[$key][2]= (float)$value->longitude;
+            }
+        }
+
+        $return_data['circle_data'] = json_encode($dimension);
+        $return_data['cricle_count_maker'] = json_encode($cricle_count_maker);
+        // End : Get Rent Applicant postcode and find lat lng
+
+        // Start : Get Rent Applicant postcode and find lat lng
+        $propertyLatLng = Property::where('longitude','!=','')
+                                ->where('latitude','!=','')
+                                ->select('property_address','longitude','latitude')
+                                ->get();
+
+        $propertyDimansion = array();
+        if(count($propertyLatLng) > 0){
+            foreach ($propertyLatLng as $key => $value) {
+                $propertyDimansion[$key][0] = $value->property_address;
+                $propertyDimansion[$key][1] = $value->latitude;
+                $propertyDimansion[$key][2] = $value->longitude;
+            }
+        }
+        $return_data['property_lat_lng'] = json_encode($propertyDimansion);
+        // End : Get Rent Applicant postcode and find lat lng
+
+        return view('properties.properties-map',$return_data);
+
+    }
